@@ -1,0 +1,48 @@
+{
+  "name": "akashic-data-pipeline",
+  "version": "0.1.0",
+  "description": "Data pipeline and connectors for Akashic - geo-intelligence engines, world monitor, and data connectors",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^15.5.20",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "lucide-react": "^1.18.0",
+    "date-fns": "^4.1.0",
+    "puppeteer": "^25.1.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "@prisma/client": "5.22.0",
+    "fast-xml-parser": "^5.8.0",
+    "osmtogeojson": "3.0.0-beta.5",
+    "satellite.js": "^6.0.2",
+    "cheerio": "^1.2.0",
+    "node-fetch": "^3.3.2",
+    "rss-parser": "^3.13.0",
+    "yahoo-finance2": "^3.15.3",
+    "maplibre-gl": "^5.24.0",
+    "deck.gl": "^9.3.3",
+    "data-fns": "^1.1.0",
+    "natural": "^5.1.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/natural": "^5.1.5",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.20",
+    "postcss": "8.5.17",
+    "prisma": "5.22.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}

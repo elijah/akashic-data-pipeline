@@ -1,0 +1,1 @@
+export type intel_type = "entity" | "event" | "claim" | "source" | "evidence" | "relationship" | "location" | "asset" | "indicator" | "document" | "media" | "market_signal"

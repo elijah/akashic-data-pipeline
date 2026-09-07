@@ -1,0 +1,51 @@
+{
+  "name": "Facebook Connector Validation CI/CD",
+  "on": {
+    "push": true,
+    "pull_request": {
+      "branches": ["main", "develop"],
+      "types": ["opened", "synchronize"],
+      "paths": ["./lib/connectors/facebook-cookeville/**"],
+      "whitelist": ["added: tests", "modified: mapper"]
+    }
+  },
+  "jobs": {
+    "validation-tests": {
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {
+          "name": 'Checkout Code',
+          "run": 'git checkout -f'  # First checkout to get latest code
+        },
+        {
+          "name": 'Restore Dependencies',
+          "run": 'yarn cache restore || yarn install'
+        },
+        {
+          "name": 'Install Test Dependencies',
+          "run": 'yarn add --dev jest ts-node'
+        },
+        {
+          "name": 'Run Unit Tests',
+          "run": 'yarn test --coverage --testFile lib/connectors/facebook-cookeville/validation.test.ts'
+        },
+        {
+          "name": 'Generate Coverage Report',
+          "run": 'yarn nyc report --reporter=text-summary'
+        },
+        {
+          "name": 'Lint with ESLint',
+          "run": 'yarn lint'
+        },
+        {
+          "name": 'Type Check with TypeScript',
+          "run": 'yarn tscheck --rootDir lib --outDir validation'
+        },
+        {
+          "name": 'Generate TypeScript Compilation Report',
+          "run": 'yarn tsc --project tsconfig.json'
+        }
+      ]
+    }
+  }
+}

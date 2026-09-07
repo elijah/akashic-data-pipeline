@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2020",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["*"]
+    }
+  },
+  "include": [
+    ".",
+    "./lib/connectors/**/*.ts",
+    "./lib/types.ts",
+    "./connector/src/connectors/**/*.ts",
+    "./connector/src/connectors/**/*.js"
+  ],
+  "exclude": [
+    "**/*test*",
+    "**/*mock*"
+  ]
+}
