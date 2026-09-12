@@ -138,10 +138,10 @@ export class RelationshipDetector {
     const words = sentence.split(/\s+/);
     const positions = [
       words.findIndex(pos => 
-        words[pos]?.toLowerCase().includes(signalA.evidence?.toLowerCase() || '')
+        words[pos]?.toLowerCase().includes((signalA.evidence || []).join(' ').toLowerCase().substring(0, 10))
       ),
       words.findIndex(pos => 
-        words[pos]?.toLowerCase().includes(signalB.evidence?.toLowerCase() || '')
+        words[pos]?.toLowerCase().includes((signalB.evidence || []).join(' ').toLowerCase().substring(0, 10))
       )
     ];
     

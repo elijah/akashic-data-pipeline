@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Data pipeline and core processing for Akashic",
   "license": "AGPL-3.0-or-later",
+  "type": "module",
   "main": "index.js",
   "exports": {
     ".": "./index.js",
@@ -36,14 +37,9 @@
     "./lib/reports": "./lib/reports/generator.js",
     "./lib/resolution/fuzzy_match": "./lib/resolution/fuzzy_match.ts",
     "./lib/net": "./lib/net/public_fetch.ts",
-    "./lib/types": "./lib/types.ts",
-    "./lib/civic-scraper-utils": "./lib/civic-scraper-utils.ts",
     "./validation/*": "./validation/*",
     "./tests/*": "./tests/*",
-    "./scripts/*": "./scripts/*",
-    ".github/workflows": "./.github/workflows",
-    "Makefile": "./Makefile",
-    "scripts/*.ts": "./scripts/*"
+    "./scripts/*": "./scripts/*"
   },
   "scripts": {
     "dev": "next dev",

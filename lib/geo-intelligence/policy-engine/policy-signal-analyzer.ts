@@ -1,20 +1,30 @@
-export class PolicySignalAnalyzer {
-  private readonly keywordDictionary: {
-    environment: string[];
-    policing: string[];
-    governance: string[];
-  };
+export interface PolicySignal {
+  focus: string;
+  strength: number;
+  evidence: string[];
+  context?: string;
+}
 
-  constructor() {
-    this.keywordDictionary = {
-      environment: [
+export interface PolicySignalCategory {
+  name: string;
+  keywords: string[];
+}
+
+export class PolicySignalAnalyzer {
+  private readonly keywordDictionary: PolicySignalCategory[] = [
+    {
+      name: 'environment',
+      keywords: [
         'climate', 'fracking', 'permit', 'pollution', 'wildlife', 'conservation',
         'EPA', 'emissions', 'greenhouse', 'carbon', 'greenhousegas', 'global',
         'warming', 'globalwarming', 'temperature', 'weather', 'precipitation',
         'rain', 'storm', 'hurricane', 'tornado', 'drought', 'flood', 'wildfire',
         'renewable', 'solar', 'wind', 'hydro', 'geothermal', 'clean'
-      ],
-      policing: [
+      ]
+    },
+    {
+      name: 'policing',
+      keywords: [
         'crime', 'violence', 'assault', 'shooting', 'attack', 'stabbings',
         'riot', 'disturbance', 'police', 'policeofficer', 'lawenforcement',
         'security', 'arrest', 'felony', 'misdemeanor', 'probation',
@@ -22,8 +32,11 @@ export class PolicySignalAnalyzer {
         'indictment', 'case', 'charge', 'arrestwarrant', 'warrant',
         'taser', 'pepper', 'handcuff', 'cuff', 'cuffed', 'chain',
         'concern', 'alarm', 'suspicious', 'breakin', 'breakingin'
-      ],
-      governance: [
+      ]
+    },
+    {
+      name: 'governance',
+      keywords: [
         'budget', 'economic', 'policy', 'legislation', 'vote', 'referendum',
         'initiative', 'proposition', 'ballot', 'candidates', 'campaign',
         'funding', 'appropriation', 'appropriations', 'spending',
@@ -32,77 +45,55 @@ export class PolicySignalAnalyzer {
         'appropriations', 'passed', 'passedbill', 'passedlaw',
         'constitution', 'amendment', 'democratic', 'majority',
         'coalition', 'caucus', 'senate', 'republican', 'democrat'
-      ],
-      ... // Additional categories could be added similarly
-    };
-  }
+      ]
+    }
+  ];
+
+  constructor() {}
 
   private normalizeKeyword(keyword: string): string {
     return keyword.toLowerCase().trim();
   }
 
-  async detectSignals(text: string): Promise<PolicySignal[]> {
-    // Normalize text for case-insensitive matching
-    const normalizedText = text.toLowerCase();
-    
-    // Initialize result containers
-    const policySignals: PolicySignal[] = [];
-    const confidenceData: Record<string, number> = {};
-
-    // Build weights based on keyword importance
-    Object.entries(this.keywordDictionary).forEach((category, keywords) => {
-      const scoreMap: Record<string, number> = {};
-      
-      // Calculate weighted count instead of simple count
-      const weightedCount = keywords
-        .map(keyword => {
-          const normalizedKeyword = this.normalizeKeyword(keyword);
-          const count = (text.match(new RegExp(`\\b${this.normalizeKeyword(keyword)}\\b`, 'gi')) || []).length;
-          
-          // Weight by keyword importance (length and specificity)
-          const baseScore = keywords.length === 1 ? 1 : Math.sqrt(keywords.length);
-          const relevanceScore = this.calculateRelevanceScore(keyword, text);
-          
-          return { keyword, score: coalScore * relevanceScore };
-        })
-        .reduce((sum, item) => sum + item.score, 0);
-      
-      if (coalScore > 0.5) {  // Only consider categories with meaningful matches
-        const signal = {
-          focus: coal as PolicyFocus,
-          strength: Math.min(1, weightedCount / 10), // Normalize against max possible
-          evidence: [],
-          context: text.match(new RegExp(keywords.filter(k => text.toLowerCase().includes(k)).join('|'), 'gi')?.[0] || '')
-        };
-        
-        // Add weighted importance to evidence snippets
-        coalScore > 1 && (coalScore > 2 ? coalScore = 2 : coalScore = coalScore);
-        
-        signals.set(coal as PolicyFocus, {
-          ...coal,
-          strength: coalScore,
-          evidence: Array.from(coalScore > 1 ? coalScore : coalScore, () => coal),
-          context: coal,
-          ...coal  // Add other properties like context if needed
-        });
-      }
-    });
-
-    // Convert signals to array
-    return Array.from(signals.entries()).map(([focus, signal]) => ({
-      ...signal,
-      strength: Math.min(1, signal.strength) // Ensure strength never exceeds 1
-    }));
+  private calculateRelevanceScore(keyword: string, text: string): number {
+    const normalizedKeyword = this.normalizeKeyword(keyword);
+    const keywordFreq = (text.match(new RegExp(`\\b${normalizedKeyword}\\b`, 'gi')) || []).length;
+    const totalWords = text.split(/\s+/).length;
+    return keywordFreq / Math.max(totalWords || 1, 1);
   }
 
-  private calculateRelevanceScore(keyword: string, text: string): number {
-    // Simple TF-IDF approximation
-    const keywordFreq = (text.match(new RegExp(this.normalizeKeyword(keyword), 'gi')) || []).length;
-    const totalWords = text.split(/\s+/).length;
-    
-    return keywordFreq / Math.max(totalWords || 1, 1);
+  async detectSignals(text: string): Promise<PolicySignal[]> {
+    const normalizedText = text.toLowerCase();
+    const signals: PolicySignal[] = [];
+
+    for (const category of this.keywordDictionary) {
+      let weightedCount = 0;
+      const matchedKeywords: string[] = [];
+
+      for (const keyword of category.keywords) {
+        const normalizedKeyword = this.normalizeKeyword(keyword);
+        const count = (text.match(new RegExp(`\\b${normalizedKeyword}\\b`, 'gi')) || []).length;
+        if (count > 0) {
+          const relevanceScore = this.calculateRelevanceScore(keyword, text);
+          weightedCount += count * relevanceScore;
+          matchedKeywords.push(keyword);
+        }
+      }
+
+      if (weightedCount > 0.5) {
+        const strength = Math.min(1, weightedCount / 10);
+        const contextMatch = text.match(new RegExp(matchedKeywords.filter(k => text.toLowerCase().includes(k.toLowerCase())).join('|'), 'gi'));
+        signals.push({
+          focus: category.name,
+          strength,
+          evidence: matchedKeywords,
+          context: contextMatch?.[0] || ''
+        });
+      }
+    }
+
+    return signals;
   }
 }
 
-// Export the analyzer instance for use across the system
 export const policySignalAnalyzer = new PolicySignalAnalyzer();

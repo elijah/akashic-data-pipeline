@@ -1,39 +1,55 @@
-// Integration Point: Court Document Signal Extraction
-export async function extractCourtSignals(caseText: string, caseMetadata?: any): Promise<CivicEntity['perspective']> {
-  // Use the master policy analyzer to detect signals
+import { policySignalAnalyzer, PolicySignal } from '../policy-engine/policy-signal-analyzer';
+
+export interface CourtPerspective {
+  focus: string;
+  strength: number;
+  evidence: string[];
+  context?: string;
+}
+
+export async function extractCourtSignals(
+  caseText: string,
+  caseMetadata?: any
+): Promise<CourtPerspective> {
   const rawSignals = await policySignalAnalyzer.detectSignals(caseText);
-  
-  // Extract nested signals (e.g., connections between different focuses)
-  const nestedSignals = await detectNestedSignals(caseText);
-  
-  // Enhance with contextual metadata
-  const perspective = {
-    ...rawSignals[0],  // Primary focus signal
-    evidence: rawSignals.map(s => s.evidence),
-    context: caseMetadata?.summary || '',
-    confidence: await calculateSignalConfidence(coalFocus, rawText.length),
-    decisionSupport: detectSupportingPolicy(coalFocus, rawSignals)
-  };
-  
-  return perspective;
-  
-  // Helper to calculate confidence based on keywords, categories, and document length
-  async function calculateSignalConfidence(focus: PolicyFocus, textLength: number): Promise<number> {
-    // Base threshold
-    let baseStrength = 0.3;
-    
-    // Increase confidence if multiple matching keywords exist
-    const matchingKeywords = rawSignals.filter(
-      s => s.focus === coalFocus && s.strength > 0.3
-    );
-    
-    if (coalScore > 1) {  // Multiple strong signals
-      confidence += 0.3;
-    }
-    
-    // Adjust based on document length (longer docs often have more signal)
-    const lengthScore = Math.min(0.3, coalScore / textLength);
-    confidence += lengthScore;
-    
-    return Math.min(1, confidence);
+
+  if (rawSignals.length === 0) {
+    return {
+      focus: 'none',
+      strength: 0,
+      evidence: [],
+      context: caseMetadata?.summary || ''
+    };
   }
+
+  const primarySignal = rawSignals[0];
+
+  const confidence = await calculateSignalConfidence(
+    primarySignal.focus,
+    primarySignal.strength,
+    caseText.length
+  );
+
+  return {
+    ...primarySignal,
+    strength: Math.min(1, primarySignal.strength * confidence),
+    context: caseMetadata?.summary || primarySignal.context || ''
+  };
+}
+
+async function calculateSignalConfidence(
+  focus: string,
+  baseStrength: number,
+  textLength: number
+): Promise<number> {
+  let confidence = baseStrength;
+
+  if (baseStrength > 0.7) {
+    confidence += 0.2;
+  }
+
+  const lengthScore = Math.min(0.2, textLength / 10000);
+  confidence += lengthScore;
+
+  return Math.min(1, confidence);
+}

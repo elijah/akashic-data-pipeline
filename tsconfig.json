@@ -6,15 +6,36 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["*"]
-    }
+      "@/*": [
+        "*"
+      ]
+    },
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "strict": false,
+    "noEmit": true,
+    "incremental": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "include": [
     ".",
+    "./connector/src/connectors/**/*.js",
+    "./connector/src/connectors/**/*.ts",
     "./lib/connectors/**/*.ts",
     "./lib/types.ts",
-    "./connector/src/connectors/**/*.ts",
-    "./connector/src/connectors/**/*.js"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "**/*test*",
