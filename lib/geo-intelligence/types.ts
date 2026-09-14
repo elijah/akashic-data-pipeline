@@ -38,7 +38,7 @@ export type claim_type =
 
 export type claim_status = "unverified" | "weak" | "partial" | "confirmed" | "disputed" | "contradicted" | "false" | "stale" | "superseded"
 
-export type source_type = "news" | "gov" | "ngo" | "int_org" | "company" | "academic" | "sensor" | "market" | "cyber" | "social" | "document" | "satellite" | "community"
+export type source_type = "news" | "gov" | "ngo" | "int_org" | "company" | "academic" | "sensor" | "market" | "cyber" | "social" | "document" | "satellite" | "community" | "scrape"
 
 export type investigation_status = "draft" | "active" | "monitoring" | "escalated" | "archived"
 

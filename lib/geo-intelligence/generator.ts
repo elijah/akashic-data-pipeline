@@ -3,6 +3,8 @@ import { fetchLiveMarkets, fetchLiveEnergy, fetchLiveCrypto } from "./engine-mar
 import { fetchLiveContinents, fetchLiveSuperpowers, fetchWorldNews } from "./engine-news"
 import { fetchLiveFlights } from "./engine-flights"
 import { get_worldmonitor_feed } from "./worldmonitor-feed"
+import { run_connector, transform_result } from "./connectors/index"
+import { eventToGeoIntelEvent } from "./connectors/putnam-civic/types"
 
 const rdm = (min: number, max: number) => Math.random() * (max - min) + min
 const rd_int = (min: number, max: number) => Math.floor(rdm(min, max))
@@ -18,6 +20,16 @@ export const get_dynamic_geo_intel = async (filter_country?: string, filter_laye
     fetchWorldNews(),
     fetchLiveFlights()
   ]);
+
+  // Run civic connectors (Putnam County TN, etc.)
+  const civic_connectors = ["putnam_civic"]
+  const civic_results = await Promise.all(
+    civic_connectors.map(name => run_connector(name))
+  )
+  const civic_events = civic_results
+    .filter((r): r is transform_result => r !== null)
+    .flatMap(r => r.events)
+    .map(eventToGeoIntelEvent)
 
   const wm = get_worldmonitor_feed()
   const wm_cat = (layer_id: string): geo_intel_event["category"] =>
@@ -56,7 +68,7 @@ export const get_dynamic_geo_intel = async (filter_country?: string, filter_laye
   }))
 
 
-  let evts: geo_intel_event[] = [...flights, ...world_news, ...wm_events];
+  let evts: geo_intel_event[] = [...flights, ...world_news, ...wm_events, ...civic_events];
 
 
   if (evts.length === 0) {

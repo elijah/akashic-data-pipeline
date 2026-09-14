@@ -1,7 +1,5 @@
-
-
-
-import { connector, fetch_result, transform_result } from "../connector"
+import type { connector, fetch_result, transform_result } from "../connector"
+export type { transform_result } from "../connector"
 import { news_connector } from "./news_connector"
 import { market_connector } from "./market_connector"
 import { aviation_connector } from "./aviation"
@@ -11,6 +9,7 @@ import { earthquake_connector } from "./earthquake"
 import { conflict_connector } from "./conflict"
 import { weather_connector } from "./weather"
 import { satellite_connector } from "./satellite"
+import { putnam_civic_connector } from "./putnam-civic"
 
 export const all_connectors: Record<string,connector>={
   news: news_connector,
@@ -21,13 +20,13 @@ export const all_connectors: Record<string,connector>={
   earthquake: earthquake_connector,
   conflict: conflict_connector,
   weather: weather_connector,
-  satellite: satellite_connector
+  satellite: satellite_connector,
+  putnam_civic: putnam_civic_connector
 }
 
 export const run_connector=async(name:string):Promise<transform_result|null>=>{
   const c=all_connectors[name]
   if(!c)return null
-  
   
   const t_start=Date.now()
   const fetch_data=await c.fetch()
@@ -63,7 +62,6 @@ export const run_all_connectors=async():Promise<transform_result>=>{
   
   return merged
 }
-
 
 export const filter_stale_events=(res:transform_result,max_age_hrs:number)=>{
   const cutoff=Date.now()-(max_age_hrs*3600000)
@@ -105,7 +103,6 @@ export const deduplicate_entities=(res:transform_result)=>{
 }
 
 export const link_events_to_entities=(res:transform_result)=>{
-  
   for(const ev of res.events){
     for(const en of res.entities){
       if(ev.summary.toLowerCase().includes(en.name.toLowerCase())){

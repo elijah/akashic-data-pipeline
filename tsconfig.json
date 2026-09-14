@@ -33,7 +33,8 @@
     ".",
     "./connector/src/connectors/**/*.js",
     "./connector/src/connectors/**/*.ts",
-    "./lib/connectors/**/*.ts",
+    "./lib/geo-intelligence/connectors/**/*.ts",
+    "./lib/geo-intelligence/connectors/**/*.ts",
     "./lib/types.ts",
     ".next/types/**/*.ts"
   ],
