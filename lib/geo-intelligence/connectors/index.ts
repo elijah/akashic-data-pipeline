@@ -10,6 +10,7 @@ import { conflict_connector } from "./conflict"
 import { weather_connector } from "./weather"
 import { satellite_connector } from "./satellite"
 import { putnam_civic_connector } from "./putnam-civic"
+import { putnam_courts_connector } from "./putnam-courts"
 
 export const all_connectors: Record<string,connector>={
   news: news_connector,
@@ -21,7 +22,8 @@ export const all_connectors: Record<string,connector>={
   conflict: conflict_connector,
   weather: weather_connector,
   satellite: satellite_connector,
-  putnam_civic: putnam_civic_connector
+  putnam_civic: putnam_civic_connector,
+  putnam_courts: putnam_courts_connector
 }
 
 export const run_connector=async(name:string):Promise<transform_result|null>=>{
