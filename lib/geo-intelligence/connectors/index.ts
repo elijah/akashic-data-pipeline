@@ -11,6 +11,8 @@ import { weather_connector } from "./weather"
 import { satellite_connector } from "./satellite"
 import { putnam_civic_connector } from "./putnam-civic"
 import { putnam_courts_connector } from "./putnam-courts"
+import { putnam_reddit_connector } from "./putnam-reddit"
+import { putnam_news_connector } from "./putnam-news"
 
 export const all_connectors: Record<string,connector>={
   news: news_connector,
@@ -23,7 +25,9 @@ export const all_connectors: Record<string,connector>={
   weather: weather_connector,
   satellite: satellite_connector,
   putnam_civic: putnam_civic_connector,
-  putnam_courts: putnam_courts_connector
+  putnam_courts: putnam_courts_connector,
+  putnam_reddit: putnam_reddit_connector,
+  putnam_news: putnam_news_connector
 }
 
 export const run_connector=async(name:string):Promise<transform_result|null>=>{
