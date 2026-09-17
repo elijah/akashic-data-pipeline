@@ -6,11 +6,18 @@ import {
   PutnamOrdinance,
   PutnamPosition,
   PutnamIncident,
+  PutnamElectionResult,
+  PutnamBuildingPermit,
+  PutnamCommunityEvent,
   incidentToEvent,
   meetingToEvent,
   courtCaseToEvent,
   ordinanceToEvent,
-  positionToEntity
+  positionToEntity,
+  electionToEvent,
+  permitToEvent,
+  communityEventToEvent,
+  electionCandidateToEntity
 } from "./putnam-civic/types";
 
 export const putnam_civic_connector: connector = {
@@ -104,7 +111,75 @@ export const putnam_civic_connector: connector = {
         }
       ];
 
-      const allData = { meetings: mockMeetings, cases: mockCases, ordinances: mockOrdinances, positions: mockPositions, incidents: mockIncidents };
+      const mockElections: PutnamElectionResult[] = [
+        {
+          id: "putnam-election-2024-01",
+          title: "2024 Putnam County General Election",
+          date: "2024-11-05",
+          source: "Putnam County Election Commission",
+          reliability: "high",
+          content: "General election for County Mayor and Commission seats.",
+          election_type: "general",
+          office: "County Mayor",
+          candidates: [
+            { name: "Jane Johnson", party: "Republican", votes: 8450, percentage: 54.3, incumbent: true },
+            { name: "Mike Davis", party: "Democrat", votes: 6120, percentage: 39.3, incumbent: false },
+            { name: "Write-ins", votes: 1024, percentage: 6.6 }
+          ],
+          total_votes: 15594,
+          jurisdiction: "Putnam County, TN",
+          status: "declared"
+        }
+      ];
+
+      const mockPermits: PutnamBuildingPermit[] = [
+        {
+          id: "putnam-permit-2024-001",
+          title: "Maple Street Residential Build",
+          date: "2024-01-10",
+          source: "Putnam County Building Department",
+          reliability: "high",
+          content: "New single-family residential construction permit issued.",
+          permit_type: "residential",
+          address: "123 Maple Street",
+          city: "Cookeville",
+          latitude: 36.0626,
+          longitude: -86.2917,
+          estimated_value: 250000,
+          status: "issued",
+          contractor: "ABC Construction LLC"
+        }
+      ];
+
+      const mockEvents: PutnamCommunityEvent[] = [
+        {
+          id: "putnam-event-2024-001",
+          title: "Putnam County Fair",
+          date: "2024-09-15",
+          end_date: "2024-09-18",
+          source: "Putnam County Fair Board",
+          reliability: "high",
+          content: "Annual county fair with livestock, exhibits, and entertainment.",
+          event_type: "fair",
+          venue: "Putnam County Fairgrounds",
+          city: "Cookeville",
+          latitude: 36.0612,
+          longitude: -86.2969,
+          organizer: "Putnam County Fair Board",
+          is_free: false
+        }
+      ];
+
+      const allData = { 
+        meetings: mockMeetings, 
+        cases: mockCases, 
+        ordinances: mockOrdinances, 
+        positions: mockPositions, 
+        incidents: mockIncidents,
+        elections: mockElections,
+        permits: mockPermits,
+        events: mockEvents
+      };
       return { raw_payloads: [allData], fetch_timestamp: Date.now() };
     } catch (e: any) {
       return { raw_payloads: [], fetch_timestamp: Date.now(), error: e.message };
@@ -122,13 +197,32 @@ export const putnam_civic_connector: connector = {
       return res;
     }
 
-    const payload = data.raw_payloads[0] as { meetings: PutnamCountyMeeting[]; cases: PutnamCourtCase[]; ordinances: PutnamOrdinance[]; positions: PutnamPosition[]; incidents: PutnamIncident[] };
+    const payload = data.raw_payloads[0] as { 
+      meetings: PutnamCountyMeeting[]; 
+      cases: PutnamCourtCase[]; 
+      ordinances: PutnamOrdinance[]; 
+      positions: PutnamPosition[]; 
+      incidents: PutnamIncident[];
+      elections: PutnamElectionResult[];
+      permits: PutnamBuildingPermit[];
+      events: PutnamCommunityEvent[];
+    };
 
     payload.meetings.forEach(meeting => res.events.push(meetingToEvent(meeting)));
     payload.cases.forEach(courtCase => res.events.push(courtCaseToEvent(courtCase)));
     payload.ordinances.forEach(ordinance => res.events.push(ordinanceToEvent(ordinance)));
     payload.incidents.forEach(incident => res.events.push(incidentToEvent(incident)));
+    payload.elections.forEach(election => res.events.push(electionToEvent(election)));
+    payload.permits.forEach(permit => res.events.push(permitToEvent(permit)));
+    payload.events.forEach(event => res.events.push(communityEventToEvent(event)));
     payload.positions.forEach(position => res.entities.push(positionToEntity(position)));
+
+    // Add election candidates as entities
+    payload.elections.forEach(election => {
+      election.candidates.forEach(candidate => {
+        res.entities.push(electionCandidateToEntity(candidate, election.id));
+      });
+    });
 
     payload.meetings.forEach(meeting => {
       meeting.agenda_items?.forEach((item, index) => {
@@ -138,6 +232,22 @@ export const putnam_civic_connector: connector = {
 
     payload.ordinances.forEach(ordinance => {
       res.claims.push({ id: `claim-${ordinance.id}`, event_id: undefined, text: `${ordinance.title} was ${ordinance.vote_result}`, summary: `${ordinance.title} was ${ordinance.vote_result}`, type: "gov_statement", status: "confirmed", confidence: 0.9, location_id: "putnam-county-tn", first_seen: new Date(ordinance.date).getTime(), last_seen: new Date(ordinance.date).getTime() });
+    });
+
+    payload.elections.forEach(election => {
+      const winner = election.candidates.reduce((a, b) => a.votes > b.votes ? a : b);
+      res.claims.push({ 
+        id: `claim-${election.id}-result`, 
+        event_id: undefined, 
+        text: `${winner.name} wins ${election.office} with ${winner.percentage}% of ${election.total_votes} votes`, 
+        summary: `${winner.name} wins ${election.office}`, 
+        type: "election", 
+        status: "confirmed", 
+        confidence: 0.95, 
+        location_id: election.jurisdiction, 
+        first_seen: new Date(election.date).getTime(), 
+        last_seen: new Date(election.date).getTime() 
+      });
     });
 
     const sourceIds = new Set<string>();
@@ -153,6 +263,9 @@ export const putnam_civic_connector: connector = {
     payload.ordinances.forEach(o => addSource(o.source, "https://www.putnamcountytn.gov/", o.reliability));
     payload.positions.forEach(p => addSource(p.source, "https://www.putnamcountytn.gov/", p.reliability));
     payload.incidents.forEach(i => addSource(i.source, "https://www.putnamcountytn.gov/", i.reliability));
+    payload.elections.forEach(e => addSource(e.source, "https://www.putnamcountytn.gov/", e.reliability));
+    payload.permits.forEach(p => addSource(p.source, "https://www.putnamcountytn.gov/", p.reliability));
+    payload.events.forEach(e => addSource(e.source, "https://www.putnamcountytn.gov/", e.reliability));
 
     // For mock data, use synchronous hash generation
     const mockHash = (text: string) => {
@@ -184,6 +297,18 @@ export const putnam_civic_connector: connector = {
     payload.incidents.forEach(i => {
       const h = mockHash(i.content);
       res.evidences.push({ id: `ev-${h}`, source_id: `src-${Date.now()}`, text_extract: i.content, url: "https://www.putnamcountytn.gov/", hash: h, confidence: i.reliability === "high" ? 0.9 : 0.7, fetched_at: data.fetch_timestamp });
+    });
+    payload.elections.forEach(e => {
+      const h = mockHash(e.content);
+      res.evidences.push({ id: `ev-${h}`, source_id: `src-${Date.now()}`, text_extract: e.content, url: "https://www.putnamcountytn.gov/", hash: h, confidence: e.reliability === "high" ? 0.9 : 0.7, fetched_at: data.fetch_timestamp });
+    });
+    payload.permits.forEach(p => {
+      const h = mockHash(p.content);
+      res.evidences.push({ id: `ev-${h}`, source_id: `src-${Date.now()}`, text_extract: p.content, url: "https://www.putnamcountytn.gov/", hash: h, confidence: p.reliability === "high" ? 0.9 : 0.7, fetched_at: data.fetch_timestamp });
+    });
+    payload.events.forEach(e => {
+      const h = mockHash(e.content);
+      res.evidences.push({ id: `ev-${h}`, source_id: `src-${Date.now()}`, text_extract: e.content, url: "https://www.putnamcountytn.gov/", hash: h, confidence: e.reliability === "high" ? 0.9 : 0.7, fetched_at: data.fetch_timestamp });
     });
 
     payload.meetings.forEach(meeting => {

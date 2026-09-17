@@ -232,6 +232,135 @@ export function votingRecordToClaim(vote: {
   };
 }
 
+// Phase 2: Additional Putnam data types
+
+export interface PutnamElectionResult {
+  id: string;
+  title: string;
+  date: string;
+  source: string;
+  reliability: string;
+  content: string;
+  election_type: 'primary' | 'general' | 'local' | 'municipal';
+  office: string;
+  candidates: Array<{
+    name: string;
+    party?: string;
+    votes: number;
+    percentage: number;
+    incumbent?: boolean;
+  }>;
+  total_votes: number;
+  jurisdiction: string;
+  status: 'declared' | 'preliminary' | 'official';
+}
+
+export interface PutnamBuildingPermit {
+  id: string;
+  title: string;
+  date: string;
+  source: string;
+  reliability: string;
+  content: string;
+  permit_type: 'residential' | 'commercial' | 'industrial' | 'renovation';
+  address: string;
+  city: string;
+  latitude?: number;
+  longitude?: number;
+  estimated_value?: number;
+  status: 'issued' | 'pending' | 'closed' | 'expired';
+  contractor?: string;
+}
+
+export interface PutnamCommunityEvent {
+  id: string;
+  title: string;
+  date: string;
+  end_date?: string;
+  source: string;
+  reliability: string;
+  content: string;
+  event_type: 'fair' | 'market' | 'library' | 'university' | 'festival' | 'meeting';
+  venue: string;
+  city: string;
+  latitude?: number;
+  longitude?: number;
+  organizer?: string;
+  is_free?: boolean;
+}
+
+export function electionToEvent(election: PutnamElectionResult): event {
+  const winner = election.candidates.reduce((a, b) => a.votes > b.votes ? a : b);
+  return {
+    id: election.id,
+    title: `${election.title} - ${election.office}`,
+    summary: `${election.title}: ${winner.name} wins with ${winner.percentage}% of ${election.total_votes} votes`,
+    category: "politics",
+    severity: election.status === "declared" ? "elevated" : "low",
+    confidence: election.reliability === "high" ? 0.9 : 
+                election.reliability === "medium" ? 0.7 : 0.5,
+    start_time: new Date(election.date).getTime(),
+    end_time: undefined,
+    location_id: election.jurisdiction,
+    status: election.status === "declared" ? "resolved" : "active",
+    created_at: Date.now()
+  };
+}
+
+export function permitToEvent(permit: PutnamBuildingPermit): event {
+  return {
+    id: permit.id,
+    title: `${permit.permit_type.toUpperCase()}: ${permit.title}`,
+    summary: `${permit.permit_type} permit at ${permit.address}, ${permit.city}. Estimated value: $${permit.estimated_value?.toLocaleString() || 'TBD'}`,
+    category: "infrastructure",
+    severity: "low",
+    confidence: permit.reliability === "high" ? 0.9 : 
+                permit.reliability === "medium" ? 0.7 : 0.5,
+    start_time: new Date(permit.date).getTime(),
+    end_time: undefined,
+    location_id: permit.city,
+    status: permit.status === "closed" ? "resolved" : "active",
+    created_at: Date.now()
+  };
+}
+
+export function communityEventToEvent(event: PutnamCommunityEvent): event {
+  return {
+    id: event.id,
+    title: event.title,
+    summary: `${event.title} at ${event.venue}, ${event.city}. Organizer: ${event.organizer || 'Unknown'}`,
+    category: "politics",
+    severity: "info",
+    confidence: event.reliability === "high" ? 0.9 : 
+                event.reliability === "medium" ? 0.7 : 0.5,
+    start_time: new Date(event.date).getTime(),
+    end_time: event.end_date ? new Date(event.end_date).getTime() : undefined,
+    location_id: event.city,
+    status: "active",
+    created_at: Date.now()
+  };
+}
+
+export function electionCandidateToEntity(candidate: PutnamElectionResult['candidates'][0], electionId: string): entity {
+  return {
+    id: `entity_candidate_${electionId}_${candidate.name.replace(/\s+/g, '_')}`,
+    type: "person",
+    name: candidate.name,
+    aliases: candidate.party ? [candidate.party] : [],
+    description: `Candidate for ${electionId}. ${candidate.incumbent ? 'Incumbent' : 'Challenger'}. ${candidate.votes} votes (${candidate.percentage}%)`,
+    confidence: 0.8,
+    is_canonical: true,
+    metadata: { 
+      election: electionId, 
+      party: candidate.party, 
+      votes: candidate.votes, 
+      percentage: candidate.percentage,
+      incumbent: candidate.incumbent 
+    },
+    created_at: Date.now()
+  };
+}
+
 /**
  * Convert pipeline event to geo_intel_event for API output
  */
