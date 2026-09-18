@@ -5,6 +5,11 @@ import { fetchLiveFlights } from "./engine-flights"
 import { get_worldmonitor_feed } from "./worldmonitor-feed"
 import { run_connector, transform_result } from "./connectors/index"
 import { eventToGeoIntelEvent } from "./connectors/putnam-civic/types"
+import { putnam_emergency_connector } from "./connectors/putnam-emergency"
+import { putnam_courts_connector } from "./connectors/putnam-courts"
+import { putnam_reddit_connector } from "./connectors/putnam-reddit"
+import { putnam_news_connector } from "./connectors/putnam-news"
+import { ChangeDetector } from "./change-detection"
 
 const rdm = (min: number, max: number) => Math.random() * (max - min) + min
 const rd_int = (min: number, max: number) => Math.floor(rdm(min, max))
@@ -22,14 +27,31 @@ export const get_dynamic_geo_intel = async (filter_country?: string, filter_laye
   ]);
 
   // Run civic connectors (Putnam County TN, etc.)
-  const civic_connectors = ["putnam_civic"]
+  const civic_connectors = ["putnam_civic", "putnam_emergency", "putnam_courts", "putnam_reddit", "putnam_news"]
   const civic_results = await Promise.all(
     civic_connectors.map(name => run_connector(name))
   )
+  const civic_results_with_names = civic_connectors
+    .map((name, i) => ({ name, result: civic_results[i] }))
+    .filter((r): r is { name: string; result: transform_result } => r.result !== null)
+  
   const civic_events = civic_results
     .filter((r): r is transform_result => r !== null)
     .flatMap(r => r.events)
     .map(eventToGeoIntelEvent)
+
+  // Change detection for civic events - capture snapshot and detect changes
+  const changeDetector = new ChangeDetector()
+  const changeReports: any[] = []
+  for (const { name, result } of civic_results_with_names) {
+    const report = changeDetector.detectChanges(name, {
+      events: result.events,
+      entities: result.entities,
+      claims: result.claims
+    })
+    changeReports.push({ source: name, report })
+    changeDetector.captureSnapshot(name, result)
+  }
 
   const wm = get_worldmonitor_feed()
   const wm_cat = (layer_id: string): geo_intel_event["category"] =>
