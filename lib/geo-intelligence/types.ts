@@ -455,6 +455,7 @@ export interface geo_intel_feed_response {
     country_iso3?: string
   }
   events: geo_intel_event[]
+  changed_events?: geo_intel_event[]
   brief: geo_intel_brief
   risk: geo_intel_risk_score
   correlations: geo_intel_correlation[]

@@ -1,4 +1,5 @@
 import { geo_intel_feed_response, geo_intel_event } from "./types"
+import type { event } from "./types"
 import { fetchLiveMarkets, fetchLiveEnergy, fetchLiveCrypto } from "./engine-markets"
 import { fetchLiveContinents, fetchLiveSuperpowers, fetchWorldNews } from "./engine-news"
 import { fetchLiveFlights } from "./engine-flights"
@@ -14,7 +15,7 @@ import { ChangeDetector } from "./change-detection"
 const rdm = (min: number, max: number) => Math.random() * (max - min) + min
 const rd_int = (min: number, max: number) => Math.floor(rdm(min, max))
 
-export const get_dynamic_geo_intel = async (filter_country?: string, filter_layer?: string): Promise<geo_intel_feed_response> => {
+export const get_dynamic_geo_intel = async (filter_country?: string, filter_layer?: string, since?: number): Promise<geo_intel_feed_response> => {
 
   const [markets, energy_prices, crypto_prices, continent_news, superpower_news, world_news, flights] = await Promise.all([
     fetchLiveMarkets(),
@@ -189,5 +190,6 @@ export const get_dynamic_geo_intel = async (filter_country?: string, filter_laye
     },
     counts: wm.counts,
     generated_at: new Date().toISOString(),
+    changed_events: since ? changeReports.flatMap(r => r.report.changedEvents.map((e: event) => e)).concat(changeReports.flatMap(r => r.report.newEvents.map((e: event) => e))).map(eventToGeoIntelEvent) : undefined,
   }
 }
