@@ -14,3 +14,4 @@ pnpm-debug.log*
 .vercel
 coverage/
 .nyc_output
+tsconfig.tsbuildinfo
