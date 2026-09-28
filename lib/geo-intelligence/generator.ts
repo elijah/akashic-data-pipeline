@@ -28,7 +28,7 @@ export const get_dynamic_geo_intel = async (filter_country?: string, filter_laye
   ]);
 
   // Run civic connectors (Putnam County TN, etc.)
-  const civic_connectors = ["putnam_civic", "putnam_emergency", "putnam_courts", "putnam_reddit", "putnam_news"]
+  const civic_connectors = ["putnam_civic", "putnam_emergency", "putnam_courts", "putnam_reddit", "putnam_news", "putnam_county_gov"]
   const civic_results = await Promise.all(
     civic_connectors.map(name => run_connector(name))
   )

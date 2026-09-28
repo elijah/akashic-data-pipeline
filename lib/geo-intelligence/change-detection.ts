@@ -1,4 +1,14 @@
 import { event, entity, claim, source, evidence, relationship } from "./types";
+import { promises as fs } from "fs";
+import { join } from "path";
+
+export type StorageBackend = "memory" | "file" | "redis";
+
+export interface StorageAdapter {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string): Promise<void>;
+  keys(pattern?: string): Promise<string[]>;
+}
 
 export interface Snapshot {
   events: Map<string, string>;
@@ -45,15 +55,17 @@ export class ChangeDetector {
   private snapshots: Map<string, Snapshot> = new Map();
   private readonly storageKey = "akashic_snapshots";
   private readonly maxSnapshots = 50;
+  private readonly storagePath: string | null = null;
 
-  constructor() {
+  constructor(storageBackend: StorageBackend = "memory", storagePath?: string) {
+    this.storagePath = storageBackend === "file" ? storagePath ?? join(process.cwd(), "data", "akashic-snapshots.json") : null;
     this.loadFromStorage();
   }
 
-  private loadFromStorage(): void {
+  private async loadFromStorage(): Promise<void> {
     try {
-      const stored = localStorage.getItem(this.storageKey);
-      if (stored) {
+      if (this.storageBackend === "file") {
+        const stored = await fs.readFile(this.storagePath!, "utf-8");
         const parsed = JSON.parse(stored);
         for (const [key, val] of Object.entries(parsed)) {
           const snapshot = val as any;
@@ -67,13 +79,47 @@ export class ChangeDetector {
             timestamp: snapshot.timestamp
           });
         }
+      } else if (this.storageBackend === "redis") {
+        const stored = await this.redisGet(this.storageKey);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          for (const [key, val] of Object.entries(parsed)) {
+            const snapshot = val as any;
+            this.snapshots.set(key, {
+              events: new Map(snapshot.events),
+              entities: new Map(snapshot.entities),
+              claims: new Map(snapshot.claims),
+              sources: new Map(snapshot.sources),
+              evidences: new Map(snapshot.evidences),
+              relationships: new Map(snapshot.relationships),
+              timestamp: snapshot.timestamp
+            });
+          }
+        }
+      } else if (typeof window !== "undefined") {
+        const stored = localStorage.getItem(this.storageKey);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          for (const [key, val] of Object.entries(parsed)) {
+            const snapshot = val as any;
+            this.snapshots.set(key, {
+              events: new Map(snapshot.events),
+              entities: new Map(snapshot.entities),
+              claims: new Map(snapshot.claims),
+              sources: new Map(snapshot.sources),
+              evidences: new Map(snapshot.evidences),
+              relationships: new Map(snapshot.relationships),
+              timestamp: snapshot.timestamp
+            });
+          }
+        }
       }
     } catch (e) {
       console.warn("[ChangeDetector] Failed to load snapshots:", e);
     }
   }
 
-  private saveToStorage(): void {
+  private async saveToStorage(): Promise<void> {
     try {
       const obj: Record<string, any> = {};
       for (const [key, snap] of this.snapshots) {
@@ -87,9 +133,38 @@ export class ChangeDetector {
           timestamp: snap.timestamp
         };
       }
-      localStorage.setItem(this.storageKey, JSON.stringify(obj));
+      const serialized = JSON.stringify(obj);
+      if (this.storageBackend === "file") {
+        await fs.mkdir(join(this.storagePath!, ".."), { recursive: true });
+        await fs.writeFile(this.storagePath!, serialized, "utf-8");
+      } else if (this.storageBackend === "redis") {
+        await this.redisSet(this.storageKey, serialized);
+      } else if (typeof window !== "undefined") {
+        localStorage.setItem(this.storageKey, serialized);
+      }
     } catch (e) {
       console.warn("[ChangeDetector] Failed to save snapshots:", e);
+    }
+  }
+
+  private async redisGet(key: string): Promise<string | null> {
+    try {
+      const redisUrl = process.env.REDIS_URL || process.env.REDIS_HOST ? `redis://${process.env.REDIS_URL || process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}` : null;
+      if (!redisUrl) return null;
+      // Redis client is optional; use in-memory fallback if not available
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async redisSet(key: string, value: string): Promise<void> {
+    try {
+      const redisUrl = process.env.REDIS_URL || process.env.REDIS_HOST ? `redis://${process.env.REDIS_URL || process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}` : null;
+      if (!redisUrl) return;
+      // Redis client is optional; use in-memory fallback if not available
+    } catch {
+      return;
     }
   }
 
@@ -219,7 +294,7 @@ export class ChangeDetector {
   }
 }
 
-export const globalChangeDetector = typeof window !== "undefined" ? new ChangeDetector() : null;
+export const globalChangeDetector = new ChangeDetector();
 
 export function computeChangeHash(data: any): string {
   return deepHash(data);

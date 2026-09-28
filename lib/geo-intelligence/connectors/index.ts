@@ -14,6 +14,7 @@ import { putnam_courts_connector } from "./putnam-courts"
 import { putnam_reddit_connector } from "./putnam-reddit"
 import { putnam_news_connector } from "./putnam-news"
 import { putnam_emergency_connector } from "./putnam-emergency"
+import { putnam_county_gov_connector } from "akashic-putnam-county-gov/lib/putnam-county-gov/transform"
 
 export const all_connectors: Record<string,connector>={
   news: news_connector,
@@ -29,7 +30,8 @@ export const all_connectors: Record<string,connector>={
   putnam_courts: putnam_courts_connector,
   putnam_reddit: putnam_reddit_connector,
   putnam_news: putnam_news_connector,
-  putnam_emergency: putnam_emergency_connector
+  putnam_emergency: putnam_emergency_connector,
+  putnam_county_gov: putnam_county_gov_connector
 }
 
 export const run_connector=async(name:string):Promise<transform_result|null>=>{
